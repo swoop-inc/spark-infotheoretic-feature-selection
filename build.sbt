@@ -1,6 +1,6 @@
 name := "spark-infotheoretic-feature-selection"
 
-version := "0.1-spark-3.0.1"
+version := "0.1-spark-3.0"
 
 organization := "com.github.sramirez"
 
