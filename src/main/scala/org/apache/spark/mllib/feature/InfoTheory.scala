@@ -17,11 +17,11 @@
 
 package org.apache.spark.mllib.feature
 
-import breeze.linalg._
-import breeze.linalg.{ DenseVector => BDV, Vector => BV, DenseMatrix => BDM }
-import scala.collection.mutable
-import org.apache.spark.rdd.RDD
+import breeze.linalg.{DenseMatrix => BDM, DenseVector => BDV, Vector => BV, _}
 import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.rdd.RDD
+
+import scala.collection.mutable
 
 /*
  * Basic and distributed primitives for Info-Theory computations: Mutual Information (MI)
@@ -42,17 +42,17 @@ class InfoTheory extends Serializable {
   /**
    * Computes MI between two variables using histograms as input data.
    *
-   * @param data RDD of tuples (feature, 2-dim histogram).
-   * @param yProb Vector of proportions for the secondary feature.
+   * @param data       RDD of tuples (feature, 2-dim histogram).
+   * @param yProb      Vector of proportions for the secondary feature.
    * @param nInstances Number of instances.
    * @return A RDD of tuples (feature, MI).
    *
    */
   protected def computeMutualInfo(
-    data: RDD[(Int, BDM[Long])],
-    yProb: BDV[Float],
-    nInstances: Long
-  ): RDD[(Int, Float)] = {
+                                   data: RDD[(Int, BDM[Long])],
+                                   yProb: BDV[Float],
+                                   nInstances: Long
+                                 ): RDD[(Int, Float)] = {
 
     val byProb = data.context.broadcast(yProb)
     val result = data.mapValues({ m =>
@@ -62,7 +62,8 @@ class InfoTheory extends Serializable {
       for (i <- 0 until m.rows) {
         for (j <- 0 until m.cols) {
           val pxy = m(i, j).toFloat / nInstances
-          val py = byProb.value(j); val px = xProb(i)
+          val py = byProb.value(j);
+          val px = xProb(i)
           // To avoid NaNs
           if (pxy != 0 && px != 0 && py != 0) {
             mi += pxy * (math.log(pxy / (px * py)) / math.log(2))
@@ -77,23 +78,23 @@ class InfoTheory extends Serializable {
   /**
    * Computes MI and CMI between three variables using histograms as input data.
    *
-   * @param data RDD of tuples (feature, 3-dim histogram).
-   * @param varY Index of the secondary feature.
-   * @param varZ Index of the conditional feature.
+   * @param data         RDD of tuples (feature, 3-dim histogram).
+   * @param varY         Index of the secondary feature.
+   * @param varZ         Index of the conditional feature.
    * @param marginalProb RDD of tuples (feature, marginal vector)
-   * @param jointProb RDD of tuples (feature, joint matrices)
-   * @param n Number of instances.
+   * @param jointProb    RDD of tuples (feature, joint matrices)
+   * @param n            Number of instances.
    * @return A RDD of tuples (feature, CMI).
    *
    */
   protected def computeConditionalMutualInfo(
-    data: RDD[(Int, BDV[BDM[Long]])],
-    varY: Int,
-    varZ: Int,
-    marginalProb: RDD[(Int, BDV[Float])],
-    jointProb: RDD[(Int, BDM[Float])],
-    n: Long
-  ): RDD[(Int, (Float, Float))] = {
+                                              data: RDD[(Int, BDV[BDM[Long]])],
+                                              varY: Int,
+                                              varZ: Int,
+                                              marginalProb: RDD[(Int, BDV[Float])],
+                                              jointProb: RDD[(Int, BDM[Float])],
+                                              n: Long
+                                            ): RDD[(Int, (Float, Float))] = {
 
     val sc = data.context
     val yProb = sc.broadcast(marginalProb.lookup(varY).head)
@@ -101,7 +102,8 @@ class InfoTheory extends Serializable {
     val yzProb = sc.broadcast(jointProb.lookup(varY).head)
 
     val result = data.mapValues({ m =>
-      var cmi = 0.0d; var mi = 0.0d
+      var cmi = 0.0d;
+      var mi = 0.0d
       // Aggregate values by row (X)
       val aggX = m.map(h1 => sum(h1(*, ::)).toDenseVector)
       // Use the previous variable to sum up and so obtaining X accumulators 
@@ -113,13 +115,17 @@ class InfoTheory extends Serializable {
       for (z <- 0 until m.length) {
         for (x <- 0 until m(z).rows) {
           for (y <- 0 until m(z).cols) {
-            val pz = zProb.value(z); val pxyz = (m(z)(x, y).toFloat / n) / pz
-            val pxz = xzProb(z)(x) / pz; val pyz = yzProb.value(y, z) / pz
+            val pz = zProb.value(z);
+            val pxyz = (m(z)(x, y).toFloat / n) / pz
+            val pxz = xzProb(z)(x) / pz;
+            val pyz = yzProb.value(y, z) / pz
             if (pxz != 0 && pyz != 0 && pxyz != 0) {
               cmi += pz * pxyz * (math.log(pxyz / (pxz * pyz)) / math.log(2))
             }
             if (z == 0) { // Do MI computations only once
-              val px = xProb(x); val pxy = xyProb(x, y); val py = yProb.value(y)
+              val px = xProb(x);
+              val pxy = xyProb(x, y);
+              val py = yProb.value(y)
               if (pxy != 0 && px != 0 && py != 0) {
                 mi += pxy * (math.log(pxy / (px * py)) / math.log(2))
               }
@@ -143,18 +149,18 @@ class InfoTheory extends Serializable {
  * and caches the relevance values, and the marginal and joint proportions derived
  * from this operation.
  *
- * @param data RDD of tuples (feature, values).
- * @param fixedFeat Index of the fixed attribute (usually the class).
+ * @param data       RDD of tuples (feature, values).
+ * @param fixedFeat  Index of the fixed attribute (usually the class).
  * @param nInstances Number of samples.
- * @param nFeatures Number of features.
+ * @param nFeatures  Number of features.
  *
  */
 class InfoTheorySparse(
-    val data: RDD[(Int, BV[Byte])],
-    fixedFeat: Int,
-    val nInstances: Long,
-    val nFeatures: Int
-) extends InfoTheory with Serializable {
+                        val data: RDD[(Int, BV[Byte])],
+                        fixedFeat: Int,
+                        val nInstances: Long,
+                        val nFeatures: Int
+                      ) extends InfoTheory with Serializable {
 
   // Broadcast the class attribute (fixed)
   val fixedVal: BV[Byte] = data.lookup(fixedFeat).head
@@ -202,8 +208,8 @@ class InfoTheorySparse(
    *
    */
   def getRedundancies(
-    varY: Int
-  ): RDD[(Int, (Float, Float))] = {
+                       varY: Int
+                     ): RDD[(Int, (Float, Float))] = {
 
     // Get and broadcast Y and the fixed variable
     val ycol = data.lookup(varY).head
@@ -225,17 +231,16 @@ class InfoTheorySparse(
    * a secondary variable (class).
    *
    * @param filterData RDD of tuples (feature, values)
-   * @param ycol (feature, values).
-   * @param yhist Histogram for variable Y (class).
-   *
+   * @param ycol       (feature, values).
+   * @param yhist      Histogram for variable Y (class).
    * @return A RDD of tuples (feature, histogram).
    *
    */
   private def computeHistograms(
-    filterData: RDD[(Int, BV[Byte])],
-    ycol: (Int, Broadcast[BV[Byte]]),
-    yhist: Map[Byte, Long]
-  ) = {
+                                 filterData: RDD[(Int, BV[Byte])],
+                                 ycol: (Int, Broadcast[BV[Byte]]),
+                                 yhist: Map[Byte, Long]
+                               ) = {
 
     val bycol = ycol._2
     // Distinct values for Y
@@ -264,15 +269,14 @@ class InfoTheorySparse(
    * (class) must be already cached.
    *
    * @param filterData RDD of tuples (feature, values)
-   * @param ycol (feature, value vector).
-   *
+   * @param ycol       (feature, value vector).
    * @return A RDD of tuples (feature, histogram).
    *
    */
   private def computeConditionalHistograms(
-    filterData: RDD[(Int, BV[Byte])],
-    ycol: (Int, BV[Byte])
-  ) = {
+                                            filterData: RDD[(Int, BV[Byte])],
+                                            ycol: (Int, BV[Byte])
+                                          ) = {
 
     // Compute the histogram for variable Y and get its values.
     val bycol = filterData.context.broadcast(ycol._2)
@@ -336,19 +340,19 @@ class InfoTheorySparse(
  * and caches the relevance values, and the marginal and joint proportions derived
  * from this operation.
  *
- * @param data RDD of tuples (feature, values).
- * @param fixedFeat Index of the fixed attribute (usually the class).
+ * @param data       RDD of tuples (feature, values).
+ * @param fixedFeat  Index of the fixed attribute (usually the class).
  * @param nInstances Number of samples.
- * @param nFeatures Number of features.
+ * @param nFeatures  Number of features.
  *
  */
 class InfoTheoryDense(
-    val data: RDD[(Int, Array[Byte])],
-    fixedFeat: Int,
-    val nInstances: Long,
-    val nFeatures: Int,
-    val originalNPart: Int
-) extends InfoTheory with Serializable {
+                       val data: RDD[(Int, Array[Byte])],
+                       fixedFeat: Int,
+                       val nInstances: Long,
+                       val nFeatures: Int,
+                       val originalNPart: Int
+                     ) extends InfoTheory with Serializable {
 
   // Count the number of distinct values per feature to limit the size of matrices
   val counterByFeat: Broadcast[Map[Int, Int]] = {
@@ -425,16 +429,16 @@ class InfoTheoryDense(
    *
    * @param data RDD of tuples (feature, values)
    * @param ycol (feature, values).
-   *
    * @return A RDD of tuples (feature, histogram).
    *
    */
   private def computeHistograms(
-    data: RDD[(Int, Array[Byte])],
-    ycol: (Int, Broadcast[Array[Array[Byte]]])
-  ) = {
+                                 data: RDD[(Int, Array[Byte])],
+                                 ycol: (Int, Broadcast[Array[Array[Byte]]])
+                               ) = {
 
-    val maxSize = 256; val bycol = ycol._2
+    val maxSize = 256;
+    val bycol = ycol._2
     val counter = counterByFeat
     val ys = counter.value.getOrElse(ycol._1, maxSize)
 
@@ -464,15 +468,14 @@ class InfoTheoryDense(
    * @param data RDD of tuples (feature, values)
    * @param ycol (feature, value vector).
    * @param zcol
-   *
    * @return A RDD of tuples (feature, histogram).
    *
    */
   private def computeConditionalHistograms(
-    data: RDD[(Int, Array[Byte])],
-    ycol: (Int, Array[Array[Byte]]),
-    zcol: (Int, Broadcast[Array[Array[Byte]]])
-  ): RDD[(Int, BDV[BDM[Long]])] = {
+                                            data: RDD[(Int, Array[Byte])],
+                                            ycol: (Int, Array[Array[Byte]]),
+                                            zcol: (Int, Broadcast[Array[Array[Byte]]])
+                                          ): RDD[(Int, BDV[BDM[Long]])] = {
 
     val bycol = data.context.broadcast(ycol._2)
     val bzcol = zcol._2
@@ -489,7 +492,9 @@ class InfoTheoryDense(
         // We create a vector (z) of matrices (x,y) to represent a 3-dim matrix
         val m = result.getOrElse(
           feat,
-          BDV.fill[BDM[Long]](zs) { BDM.zeros[Long](bcounter.value.getOrElse(feat, 256), ys) }
+          BDV.fill[BDM[Long]](zs) {
+            BDM.zeros[Long](bcounter.value.getOrElse(feat, 256), ys)
+          }
         )
         for (i <- arr.indices) {
           val y = bycol.value(block)(i)
@@ -514,19 +519,19 @@ object InfoTheory {
    * This apply this primitives to all the input attributes with respect to a fixed variable
    * (typically the class) and a secondary (changing) variable, typically the last selected feature.
    *
-   * @param   data RDD of tuples in columnar format (feature, vector).
-   * @param   fixedFeat Index of the fixed attribute (usually the class).
-   * @param   nInstances Number of samples.
-   * @param   nFeatures Number of features.
-   * @return  An info-theory object which contains the relevances and some proportions cached.
+   * @param data       RDD of tuples in columnar format (feature, vector).
+   * @param fixedFeat  Index of the fixed attribute (usually the class).
+   * @param nInstances Number of samples.
+   * @param nFeatures  Number of features.
+   * @return An info-theory object which contains the relevances and some proportions cached.
    *
    */
   def initializeSparse(
-    data: RDD[(Int, BV[Byte])],
-    fixedFeat: Int,
-    nInstances: Long,
-    nFeatures: Int
-  ): InfoTheorySparse = {
+                        data: RDD[(Int, BV[Byte])],
+                        fixedFeat: Int,
+                        nInstances: Long,
+                        nFeatures: Int
+                      ): InfoTheorySparse = {
     new InfoTheorySparse(data, fixedFeat, nInstances, nFeatures)
   }
 
@@ -535,20 +540,20 @@ object InfoTheory {
    * This apply this primitives to all the input attributes with respect to a fixed variable
    * (typically the class) and a secondary (changing) variable, typically the last selected feature.
    *
-   * @param   data RDD of tuples in columnar format (feature, (block, vector)).
-   * @param   fixedFeat Index of the fixed attribute (usually the class).
-   * @param   nInstances Number of samples.
-   * @param   nFeatures Number of features.
-   * @return  An info-theory object which contains the relevances and some proportions cached.
+   * @param data       RDD of tuples in columnar format (feature, (block, vector)).
+   * @param fixedFeat  Index of the fixed attribute (usually the class).
+   * @param nInstances Number of samples.
+   * @param nFeatures  Number of features.
+   * @return An info-theory object which contains the relevances and some proportions cached.
    *
    */
   def initializeDense(
-    data: RDD[(Int, Array[Byte])],
-    fixedFeat: Int,
-    nInstances: Long,
-    nFeatures: Int,
-    originalNPart: Int
-  ): InfoTheoryDense = {
+                       data: RDD[(Int, Array[Byte])],
+                       fixedFeat: Int,
+                       nInstances: Long,
+                       nFeatures: Int,
+                       originalNPart: Int
+                     ): InfoTheoryDense = {
     new InfoTheoryDense(data, fixedFeat, nInstances, nFeatures, originalNPart)
   }
 
@@ -558,7 +563,7 @@ object InfoTheory {
    * Calculate entropy for the given frequencies.
    *
    * @param freqs Frequencies of each different class
-   * @param n Number of elements
+   * @param n     Number of elements
    *
    */
   private[feature] def entropy(freqs: Seq[Long], n: Long) = {

@@ -27,16 +27,16 @@ package org.apache.spark.mllib.feature
  * The Journal of Machine Learning Research, 13(1), 27-66.
  *
  * @param criterion String that specifies the criterion to be used
- * (options: JMI, mRMR, ICAP, CMIM and IF).
+ *                  (options: JMI, mRMR, ICAP, CMIM and IF).
  * @return An initialized info-theory criterion.
  *
  */
 
 class InfoThCriterionFactory(
-    val criterion: String,
-    val beta: Float = 0.0f,
-    val alpha: Float = 0.0f
-) extends Serializable {
+                              val criterion: String,
+                              val beta: Float = 0.0f,
+                              val alpha: Float = 0.0f
+                            ) extends Serializable {
 
   val MIM = "mim"
   val MIFS = "mifs"
@@ -47,7 +47,7 @@ class InfoThCriterionFactory(
   val IF = "if"
 
   /**
-   *  Generates a specific info-theory criterion
+   * Generates a specific info-theory criterion
    */
   def getCriterion: InfoThCriterion = {
     criterion match {

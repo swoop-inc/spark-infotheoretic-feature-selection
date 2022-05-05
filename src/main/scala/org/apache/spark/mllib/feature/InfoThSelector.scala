@@ -17,24 +17,20 @@
 
 package org.apache.spark.mllib.feature
 
-import org.json4s._
-import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods._
 import breeze.linalg.{DenseVector => BDV, SparseVector => BSV, Vector => BV}
+import org.apache.spark.{HashPartitioner, Partitioner, SparkContext, SparkException}
 import org.apache.spark.annotation.Since
+import org.apache.spark.internal.Logging
 import org.apache.spark.mllib.feature.{InfoThCriterionFactory => FT}
+import org.apache.spark.mllib.linalg.{DenseVector, SparseVector, Vector, Vectors}
 import org.apache.spark.mllib.regression.LabeledPoint
-import org.apache.spark.mllib.linalg.Vectors
-import org.apache.spark.mllib.linalg.{DenseVector, SparseVector, Vector}
 import org.apache.spark.mllib.util.{Loader, Saveable}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.storage.StorageLevel
-import org.apache.spark.HashPartitioner
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkException
 import org.apache.spark.sql.{Row, SparkSession}
-import org.apache.spark.Partitioner
-import org.apache.spark.internal.Logging
+import org.apache.spark.storage.StorageLevel
+import org.json4s.JsonDSL._
+import org.json4s._
+import org.json4s.jackson.JsonMethods._
 
 import scala.collection.mutable
 
@@ -47,9 +43,9 @@ protected case class F(feat: Int, crit: Double)
  * @param selectedFeatures list of indices to select (filter). Must be ordered asc
  */
 @Since("1.6.0")
-class InfoThSelectorModel @Since("1.6.0") (
-    @Since("1.6.0") val selectedFeatures: Array[Int]
-) extends VectorTransformer with Saveable {
+class InfoThSelectorModel @Since("1.6.0")(
+                                           @Since("1.6.0") val selectedFeatures: Array[Int]
+                                         ) extends VectorTransformer with Saveable {
 
   require(isSorted(selectedFeatures), "Array has to be sorted asc")
 
@@ -78,7 +74,8 @@ class InfoThSelectorModel @Since("1.6.0") (
    * Returns a vector with features filtered.
    * Preserves the order of filtered features the same as their indices are stored.
    * Might be moved to Vector as .slice
-   * @param features vector
+   *
+   * @param features      vector
    * @param filterIndices indices of features to filter, must be ordered asc
    */
   private def compress(features: Vector, filterIndices: Array[Int]): Vector = {
@@ -181,49 +178,49 @@ object InfoThSelectorModel extends Loader[InfoThSelectorModel] {
  * Train a feature selection model according to a given criterion
  * and return a subset of data.
  *
- * @param   criterionFactory Initialized criterion to use in this selector
- * @param   nToSelect Maximum number of features to select
- * @param   numPartitions Number of partitions to structure the data.
- * @return  A feature selection model which contains a subset of selected features.
+ * @param criterionFactory Initialized criterion to use in this selector
+ * @param nToSelect        Maximum number of features to select
+ * @param numPartitions    Number of partitions to structure the data.
+ * @return A feature selection model which contains a subset of selected features.
  *
- * Note: LabeledPoint data must be integer values in double representation
- * with a maximum of 256 distinct values. By doing so, data can be transformed
- * to byte class directly, making the selection process much more efficient.
+ *         Note: LabeledPoint data must be integer values in double representation
+ *         with a maximum of 256 distinct values. By doing so, data can be transformed
+ *         to byte class directly, making the selection process much more efficient.
  *
- * Note: numPartitions must be less or equal to the number of features to achieve
- * a better performance. Therefore, the number of histograms to be shuffled is reduced.
+ *         Note: numPartitions must be less or equal to the number of features to achieve
+ *         a better performance. Therefore, the number of histograms to be shuffled is reduced.
  *
  */
 @Since("1.6.0")
-class InfoThSelector @Since("1.6.0") (
-  val criterionFactory: FT,
-  val nToSelect: Int = 25,
-  val numPartitions: Int = 0
-)
-    extends Serializable with Logging {
+class InfoThSelector @Since("1.6.0")(
+                                      val criterionFactory: FT,
+                                      val nToSelect: Int = 25,
+                                      val numPartitions: Int = 0
+                                    )
+  extends Serializable with Logging {
 
   // Case class for columnar data (dense and sparse version)
   private case class ColumnarData(
-    dense: RDD[(Int, Array[Byte])],
-    sparse: RDD[(Int, BV[Byte])],
-    isDense: Boolean,
-    originalNPart: Int
-  )
+                                   dense: RDD[(Int, Array[Byte])],
+                                   sparse: RDD[(Int, BV[Byte])],
+                                   isDense: Boolean,
+                                   originalNPart: Int
+                                 )
 
   /**
    * Performs a info-theory FS process.
    *
-   * @param data Columnar data (last element is the class attribute).
+   * @param data       Columnar data (last element is the class attribute).
    * @param nInstances Number of samples.
-   * @param nFeatures Number of features.
+   * @param nFeatures  Number of features.
    * @return A list with the most relevant features and its scores.
    *
    */
   private[feature] def selectFeatures(
-    data: ColumnarData,
-    nInstances: Long,
-    nFeatures: Int
-  ) = {
+                                       data: ColumnarData,
+                                       nInstances: Long,
+                                       nFeatures: Int
+                                     ) = {
 
     val label = nFeatures - 1
     // Initialize all criteria with the relevance computed in this phase. 
@@ -248,8 +245,8 @@ class InfoThSelector @Since("1.6.0") (
 
     // Print most relevant features
     val topByRelevance = relevances.sortBy(_._2, ascending = false).take(nToSelect)
-//    val strRels = topByRelevance.map({ case (f, mi) => (f + 1) + "\t" + "%.4f" format mi }).mkString("\n")
-//    println("\n*** MaxRel features ***\nFeature\tScore\n" + strRels)
+    //    val strRels = topByRelevance.map({ case (f, mi) => (f + 1) + "\t" + "%.4f" format mi }).mkString("\n")
+    //    println("\n*** MaxRel features ***\nFeature\tScore\n" + strRels)
 
     // Get the maximum and initialize the set of selected features with it
     val (max, mid) = pool.zipWithIndex.maxBy(_._1.relevance)
@@ -289,12 +286,12 @@ class InfoThSelector @Since("1.6.0") (
   }
 
   /**
-    * Process in charge of transforming data in a columnar format and launching the FS process.
-    *
-    * @param data RDD of LabeledPoint.
-    * @return a Sequence of selected features (with scores)
-    *
-    */
+   * Process in charge of transforming data in a columnar format and launching the FS process.
+   *
+   * @param data RDD of LabeledPoint.
+   * @return a Sequence of selected features (with scores)
+   *
+   */
   def selectFeatures(data: RDD[LabeledPoint]): Seq[F] = {
 
     if (data.getStorageLevel == StorageLevel.NONE) {
@@ -405,12 +402,12 @@ class InfoThSelector @Since("1.6.0") (
   }
 
   /**
-    * Process in charge of transforming data in a columnar format and launching the FS process.
-    *
-    * @param data RDD of LabeledPoint.
-    * @return A feature selection model which contains a subset of selected features.
-    *
-    */
+   * Process in charge of transforming data in a columnar format and launching the FS process.
+   *
+   * @param data RDD of LabeledPoint.
+   * @return A feature selection model which contains a subset of selected features.
+   *
+   */
   def fit(data: RDD[LabeledPoint]): InfoThSelectorModel = {
 
     val selected = selectFeatures(data)
@@ -426,10 +423,10 @@ class InfoThSelector @Since("1.6.0") (
 }
 
 class ExactPartitioner(
-  partitions: Int,
-  elements: Long
-)
-    extends Partitioner {
+                        partitions: Int,
+                        elements: Long
+                      )
+  extends Partitioner {
 
   override def numPartitions: Int = partitions
 

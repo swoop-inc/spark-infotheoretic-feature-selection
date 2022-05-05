@@ -1,17 +1,17 @@
 package org.apache.spark.ml.feature
 
-import org.apache.spark.sql.{DataFrame, SQLContext}
+import org.apache.spark.ml.feature.TestHelper._
+import org.apache.spark.sql.SQLContext
 import org.junit.runner.RunWith
-import org.scalatest.{BeforeAndAfterAll, FunSuite}
 import org.scalatest.junit.JUnitRunner
-import TestHelper._
+import org.scalatest.{BeforeAndAfterAll, FunSuite}
 
 
 /**
-  * Test information theoretic feature selection on datasets from Peng's webpage
-  *
-  * @author Sergio Ramirez
-  */
+ * Test information theoretic feature selection on datasets from Peng's webpage
+ *
+ * @author Sergio Ramirez
+ */
 @RunWith(classOf[JUnitRunner])
 class ITSelectorSuite extends FunSuite with BeforeAndAfterAll {
 
@@ -28,8 +28,8 @@ class ITSelectorSuite extends FunSuite with BeforeAndAfterAll {
     val cols = df.columns
     val pad = 2
     val allVectorsDense = true
-    val model = getSelectorModel(sqlContext, df, cols.drop(1), cols.head, 
-        10, 10, allVectorsDense, pad)
+    val model = getSelectorModel(sqlContext, df, cols.drop(1), cols.head,
+      10, 10, allVectorsDense, pad)
 
     assertResult("512, 764, 1324, 1380, 1411, 1422, 1581, 1670, 1671, 1971") {
       model.selectedFeatures.mkString(", ")
@@ -43,14 +43,14 @@ class ITSelectorSuite extends FunSuite with BeforeAndAfterAll {
     val cols = df.columns
     val pad = 2
     val allVectorsDense = true
-    val model = getSelectorModel(sqlContext, df, cols.drop(1), cols.head, 
-        10, 10, allVectorsDense, pad)
+    val model = getSelectorModel(sqlContext, df, cols.drop(1), cols.head,
+      10, 10, allVectorsDense, pad)
 
     assertResult("1084, 1719, 1774, 1822, 2061, 2294, 3192, 4387, 4787, 6795") {
       model.selectedFeatures.mkString(", ")
     }
   }
-  
+
   /** Do mRMR feature selection on LUNG data. */
   test("Run ITFS on lung data (nPart = 10, nfeat = 10)") {
 
@@ -58,8 +58,8 @@ class ITSelectorSuite extends FunSuite with BeforeAndAfterAll {
     val cols = df.columns
     val pad = 2
     val allVectorsDense = true
-    val model = getSelectorModel(sqlContext, df, cols.drop(1), cols.head, 
-        10, 10, allVectorsDense, pad)
+    val model = getSelectorModel(sqlContext, df, cols.drop(1), cols.head,
+      10, 10, allVectorsDense, pad)
 
     assertResult("18, 22, 29, 125, 132, 150, 166, 242, 243, 269") {
       model.selectedFeatures.mkString(", ")
@@ -73,8 +73,8 @@ class ITSelectorSuite extends FunSuite with BeforeAndAfterAll {
     val cols = df.columns
     val pad = 2
     val allVectorsDense = true
-    val model = getSelectorModel(sqlContext, df, cols.drop(1), cols.head, 
-        10, 10, allVectorsDense, pad)
+    val model = getSelectorModel(sqlContext, df, cols.drop(1), cols.head,
+      10, 10, allVectorsDense, pad)
 
     assertResult("236, 393, 759, 2747, 2818, 2841, 2862, 3014, 3702, 3792") {
       model.selectedFeatures.mkString(", ")
@@ -88,8 +88,8 @@ class ITSelectorSuite extends FunSuite with BeforeAndAfterAll {
     val cols = df.columns
     val pad = 2
     val allVectorsDense = true
-    val model = getSelectorModel(sqlContext, df, cols.drop(1), cols.head, 
-        10, 10, allVectorsDense, pad)
+    val model = getSelectorModel(sqlContext, df, cols.drop(1), cols.head,
+      10, 10, allVectorsDense, pad)
 
     assertResult("443, 755, 1369, 1699, 3483, 5641, 6290, 7674, 9399, 9576") {
       model.selectedFeatures.mkString(", ")

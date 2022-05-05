@@ -18,29 +18,27 @@
 package org.apache.spark.ml.feature
 
 import org.apache.hadoop.fs.Path
-
-import org.apache.spark.annotation.{ Since, Experimental }
+import org.apache.spark.annotation.{Experimental, Since}
 import org.apache.spark.ml._
-import org.apache.spark.ml.attribute.{ AttributeGroup, _ }
-import org.apache.spark.ml.linalg.{ Vector, VectorUDT }
+import org.apache.spark.ml.attribute._
+import org.apache.spark.ml.linalg.{Vector, VectorUDT}
 import org.apache.spark.ml.param._
 import org.apache.spark.ml.param.shared._
 import org.apache.spark.ml.util._
 import org.apache.spark.mllib.feature
-import org.apache.spark.mllib.linalg.{ Vectors => OldVectors }
-import org.apache.spark.mllib.regression.{ LabeledPoint => OldLabeledPoint }
+import org.apache.spark.mllib.feature.InfoThCriterionFactory
+import org.apache.spark.mllib.linalg.{Vectors => OldVectors}
+import org.apache.spark.mllib.regression.{LabeledPoint => OldLabeledPoint}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{ DoubleType, StructField, StructType }
-
-import org.apache.spark.mllib.feature.InfoThCriterionFactory
+import org.apache.spark.sql.types.{DoubleType, StructField, StructType}
 
 /**
  * Params for [[InfoThSelector]] and [[InfoThSelectorModel]].
  */
 private[feature] trait InfoThSelectorParams extends Params
-    with HasFeaturesCol with HasOutputCol with HasLabelCol {
+  with HasFeaturesCol with HasOutputCol with HasLabelCol {
 
   /**
    * Information Theoretic criterion used to rank the features. The default value is the criterion mRMR.
@@ -100,8 +98,8 @@ private[feature] trait InfoThSelectorParams extends Params
  * categorical label.
  */
 @Experimental
-final class InfoThSelector @Since("1.6.0") (@Since("1.6.0") override val uid: String)
-    extends Estimator[InfoThSelectorModel] with InfoThSelectorParams with DefaultParamsWritable {
+final class InfoThSelector @Since("1.6.0")(@Since("1.6.0") override val uid: String)
+  extends Estimator[InfoThSelectorModel] with InfoThSelectorParams with DefaultParamsWritable {
 
   @Since("1.6.0")
   def this() = this(Identifiable.randomUID("InfoThSelector"))
@@ -168,11 +166,11 @@ object InfoThSelector extends DefaultParamsReadable[InfoThSelector] {
  * Model fitted by [[InfoThSelector]].
  */
 @Experimental
-final class InfoThSelectorModel private[ml] (
-  @Since("1.6.0") override val uid: String,
-  private val InfoThSelector: feature.InfoThSelectorModel
-)
-    extends Model[InfoThSelectorModel] with InfoThSelectorParams with MLWritable {
+final class InfoThSelectorModel private[ml](
+                                             @Since("1.6.0") override val uid: String,
+                                             private val InfoThSelector: feature.InfoThSelectorModel
+                                           )
+  extends Model[InfoThSelectorModel] with InfoThSelectorParams with MLWritable {
 
   import InfoThSelectorModel._
 

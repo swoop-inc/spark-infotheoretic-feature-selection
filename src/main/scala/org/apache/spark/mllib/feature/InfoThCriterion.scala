@@ -44,7 +44,7 @@ trait InfoThCriterion extends Serializable with Ordered[InfoThCriterion] {
   }
 
   /**
-   *  Compares the score of two criterions
+   * Compares the score of two criterions
    */
   override def compare(that: InfoThCriterion): Int = {
     this.score.compare(that.score)
@@ -58,7 +58,8 @@ trait InfoThCriterion extends Serializable with Ordered[InfoThCriterion] {
   /**
    *
    * Updates the criterion score with new mutual information and conditional mutual information.
-   * @param mi Mutual information between the criterion and another variable.
+   *
+   * @param mi  Mutual information between the criterion and another variable.
    * @param cmi Conditional mutual information between the criterion and another variable.
    *
    */
@@ -82,6 +83,7 @@ class Mim extends InfoThCriterion {
   }
 
   override def update(mi: Float = 0.0f, cmi: Float = 0.0f): InfoThCriterion = this
+
   override def toString: String = "MIM"
 }
 
@@ -122,15 +124,18 @@ class Jmi extends InfoThCriterion {
       relevance
     }
   }
+
   override def init(relevance: Float): InfoThCriterion = {
     this.setRelevance(relevance)
   }
+
   override def update(mi: Float, cmi: Float): InfoThCriterion = {
     redundance += mi
     conditionalRedundance += cmi
     selectedSize += 1
     this
   }
+
   override def toString: String = "JMI"
 }
 
@@ -149,14 +154,17 @@ class Mrmr extends InfoThCriterion {
       relevance
     }
   }
+
   override def init(relevance: Float): InfoThCriterion = {
     this.setRelevance(relevance)
   }
+
   override def update(mi: Float, cmi: Float = 0.0f): InfoThCriterion = {
     redundance += mi
     selectedSize += 1
     this
   }
+
   override def toString: String = "MRMR"
 }
 
@@ -170,13 +178,16 @@ class Cmim extends InfoThCriterion {
   override def score: Float = {
     relevance - modifier
   }
+
   override def update(mi: Float, cmi: Float): InfoThCriterion = {
     modifier = math.max(modifier, mi - cmi)
     this
   }
+
   override def init(relevance: Float): InfoThCriterion = {
     this.setRelevance(relevance)
   }
+
   override def toString: String = "CMIM"
 
 }
@@ -198,12 +209,15 @@ class Icap extends InfoThCriterion {
   override def score: Float = {
     relevance - modifier
   }
+
   override def update(mi: Float, cmi: Float): InfoThCriterion = {
     modifier += math.max(0.0f, mi - cmi)
     this
   }
+
   override def init(relevance: Float): InfoThCriterion = {
     this.setRelevance(relevance)
   }
+
   override def toString: String = "ICAP"
 }

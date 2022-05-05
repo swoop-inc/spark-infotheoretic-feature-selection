@@ -33,7 +33,8 @@ object FeatureSelectionUtils {
    * Returns a vector with features filtered.
    * Preserves the order of filtered features the same as their indices are stored.
    * Might be moved to Vector as .slice
-   * @param features vector
+   *
+   * @param features      vector
    * @param filterIndices indices of features to filter, must be ordered asc
    */
   private[feature] def compress(features: Vector, filterIndices: Array[Int]): Vector = {
