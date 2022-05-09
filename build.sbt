@@ -21,3 +21,7 @@ libraryDependencies ++= Seq(
 
 publishMavenStyle := true
 publishTo := sonatypePublishToBundle.value
+scmInfo := Some(ScmInfo(url("https://github.com/swoop-inc/spark-infotheoretic-feature-selection"), "git@github.com:swoop-inc/spark-infotheoretic-feature-selection.git"))
+developers ++= List(
+  Developer("greglu", "Greg Lu", "@greglu", url("https://github.com/greglu"))
+)
